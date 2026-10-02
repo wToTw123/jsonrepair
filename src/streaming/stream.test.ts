@@ -3,6 +3,20 @@ import { describe, expect, test } from 'vitest'
 import { jsonrepairTransform } from './stream'
 
 describe('stream', () => {
+  test.each([
+    'whole',
+    'characters'
+  ])('repair the regression through a finite-buffer stream (%s)', async (mode) => {
+    const prefix = '0,'.repeat(80)
+    const text = `[${prefix}${'{"a": C:/tmp/x.json}'}]`
+    const input = Readable.from(mode === 'characters' ? [...text] : [text])
+    const output = input.pipe(jsonrepairTransform({ bufferSize: 64, chunkSize: 8 }))
+    const chunks = await streamToChunks(output)
+
+    expect(chunks.length).toBeGreaterThan(1)
+    expect(chunks.join('')).toBe(`[${prefix}${'{"a": "C:/tmp/x.json"}'}]`)
+  })
+
   test('should create and pipe a jsonrepair transform', async () => {
     const input = new Readable()
     input.push("{name: 'John'}")
