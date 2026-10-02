@@ -110,6 +110,25 @@ describe.each(implementations)('jsonrepair [$name]', ({ jsonrepair }) => {
   })
 
   describe('repair invalid JSON', () => {
+    test.each([
+      'C:/tmp/x.json',
+      'D:/temp/file.txt',
+      'file:/tmp/x.json',
+      '$FILE:/tmp/payload/email-vars.json'
+    ])('repair an unquoted single-slash path %s', (path) => {
+      expect(jsonrepair(`{"a": ${path}}`)).toBe(`{"a": "${path}"}`)
+      expect(jsonrepair(`[${path}]`)).toBe(`["${path}"]`)
+      expect(jsonrepair(path)).toBe(`"${path}"`)
+    })
+
+    test('preserve URL, comment and regex handling beside single-slash paths', () => {
+      expect(jsonrepair('{"a": https://example.com/x}')).toBe('{"a": "https://example.com/x"}')
+      expect(jsonrepair('{"a": foo:bar}')).toBe('{"a": "foo:bar"}')
+      expect(jsonrepair('{"a": 1/* comment */}')).toBe('{"a": 1}')
+      expect(jsonrepair('{"a": /foo/}')).toBe('{"a": "/foo/"}')
+      expect(jsonrepair('{"a": "C:/tmp/x.json"}')).toBe('{"a": "C:/tmp/x.json"}')
+    })
+
     test('should add missing quotes', () => {
       expect(jsonrepair('abc')).toBe('"abc"')
       expect(jsonrepair('hello   world')).toBe('"hello   world"')
