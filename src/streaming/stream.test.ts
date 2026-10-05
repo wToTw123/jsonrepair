@@ -17,6 +17,29 @@ describe('stream', () => {
     expect(chunks.join('')).toBe(`[${prefix}${'{"a": "C:/tmp/x.json"}'}]`)
   })
 
+  describe.each([
+    'whole',
+    'characters'
+  ])('preserve comments through a finite-buffer stream (%s)', (mode) => {
+    test.each([
+      ['b', 'note'],
+      ['b', 'drop this text'],
+      ['C', 'note'],
+      ['C', 'drop this text'],
+      ['$FILE', 'note'],
+      ['$FILE', 'drop this text']
+    ])('discard the comment after %s: (%s)', async (prefix, comment) => {
+      const padding = '0,'.repeat(80)
+      const text = `[${padding}{"a": ${prefix}://${comment}\n, "b": 1}]`
+      const input = Readable.from(mode === 'characters' ? [...text] : [text])
+      const output = input.pipe(jsonrepairTransform({ bufferSize: 64, chunkSize: 8 }))
+      const chunks = await streamToChunks(output)
+
+      expect(chunks.length).toBeGreaterThan(1)
+      expect(chunks.join('')).toBe(`[${padding}{"a": "${prefix}:"\n, "b": 1}]`)
+    })
+  })
+
   test('should create and pipe a jsonrepair transform', async () => {
     const input = new Readable()
     input.push("{name: 'John'}")
