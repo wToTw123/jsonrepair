@@ -112,6 +112,8 @@ describe.each(implementations)('jsonrepair [$name]', ({ jsonrepair }) => {
   describe('repair invalid JSON', () => {
     test.each([
       'C:/tmp/x.json',
+      'c:/tmp/x.json',
+      'C:/',
       'D:/temp/file.txt',
       'file:/tmp/x.json',
       '$FILE:/tmp/payload/email-vars.json'
@@ -121,8 +123,30 @@ describe.each(implementations)('jsonrepair [$name]', ({ jsonrepair }) => {
       expect(jsonrepair(path)).toBe(`"${path}"`)
     })
 
+    test.each([
+      ['b', 'note'],
+      ['b', 'drop this text'],
+      ['C', 'note'],
+      ['C', 'drop this text'],
+      ['$FILE', 'note'],
+      ['$FILE', 'drop this text']
+    ])('preserve a line comment after %s: (%s)', (prefix, comment) => {
+      expect(jsonrepair(`{"a": ${prefix}://${comment}\n, "b": 1}`)).toBe(
+        `{"a": "${prefix}:"\n, "b": 1}`
+      )
+    })
+
+    test.each(['b', 'C', '$FILE'])('preserve a block comment after %s:', (prefix) => {
+      expect(jsonrepair(`{"a": ${prefix}:/*note*/\n, "b": 1}`)).toBe(
+        `{"a": "${prefix}:"\n, "b": 1}`
+      )
+    })
+
     test('preserve URL, comment and regex handling beside single-slash paths', () => {
       expect(jsonrepair('{"a": https://example.com/x}')).toBe('{"a": "https://example.com/x"}')
+      expect(jsonrepair('{"a": file://localhost/tmp/x.json}')).toBe(
+        '{"a": "file://localhost/tmp/x.json"}'
+      )
       expect(jsonrepair('{"a": foo:bar}')).toBe('{"a": "foo:bar"}')
       expect(jsonrepair('{"a": 1/* comment */}')).toBe('{"a": 1}')
       expect(jsonrepair('{"a": /foo/}')).toBe('{"a": "/foo/"}')

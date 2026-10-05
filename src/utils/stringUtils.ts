@@ -48,9 +48,9 @@ export function isFunctionNameChar(char: string) {
   )
 }
 
-// Matches URL schemes, Windows drive paths, and file-reference tokens.
+// Matches URL schemes and single-slash paths without consuming comments after drive/$FILE prefixes.
 export const regexUrlStart =
-  /^(?:http|https|ftp|mailto|file|data|irc|[A-Za-z]|\$FILE):\/(?:\/|[^/*])?$/
+  /^(?:(?:http|https|ftp|mailto|file|data|irc):\/(?:\/|[^/*])?|(?:[A-Za-z]|\$FILE):\/[^/*]?)$/
 
 // matches all valid URL characters EXCEPT "[", "]", and ",", since that are important JSON delimiters
 export const regexUrlChar = /^[A-Za-z0-9-._~:/?#@!$&'()*+;=]$/
